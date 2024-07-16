@@ -174,7 +174,7 @@ For batched inference on random train or test splits:
 ```
 python tools/vis_dfsm.py --serial 52 --batch_size 4 --vis_cols 4 --cfg configs/nabirds_ft_is224_weakaugs.yaml --model_name glsvit_base_patch14_dinov2.lvd142m --vis_mask gls --vis_mask_pow
 python tools/vis_dfsm.py --serial 52 --batch_size 4 --vis_cols 4 --cfg configs/nabirds_ft_is224_weakaugs.yaml --model_name glsvit_base_patch14_dinov2.lvd142m --vis_mask attention_11
-python tools/vis_dfsm.py --serial 52 --batch_size 4 --vis_cols 4 --cfg configs/nabirds_ft_is224_weakaugs.yaml --model_name glsvit_base_patch14_dinov2.lvd142m --vis_mask rollout_0_4
+python tools/vis_dfsm.py --serial 52 --batch_size 4 --vis_cols 4 --cfg configs/nabirds_ft_is224_weakaugs.yaml --model_name glsvit_base_patch14_dinov2.lvd142m --vis_mask rollout_0_12
 ```
 
 For individual inference:
