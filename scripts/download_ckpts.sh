@@ -1,5 +1,6 @@
-mkdir ckpts
-gdown 1ouR8ULdAX7xOEq9-wsem0dZVQtFoIcNy -O ckpts/cub_glsim_224.pth
-gdown 1tvJrj9ra_iF5kcvR3OK5GJdxITWLDx-a -O ckpts/dafb_glsim.pth
-gdown 13HkYasgHP2hRagmaml_8SwPPhvWJEoFq -O ckpts/inat_glsim.pth
-gdown 1PawAOTG4-1V5EOBnnC2glzlzJnSfw4c0 -O ckpts/nabirds_glsim.pth
+mkdir -p ckpts
+
+wget https://huggingface.co/NYCU-PCSxNTHU-MIS/GLSim/resolve/main/cub_vit_b16_16_2.pth?download=true -O ckpts/cub_glsim_224.pth
+wget https://huggingface.co/NYCU-PCSxNTHU-MIS/GLSim/resolve/main/dafb_vit_b16_16_2.pth?download=true -O ckpts/dafb_glsim.pth
+wget https://huggingface.co/NYCU-PCSxNTHU-MIS/GLSim/resolve/main/inat17_vit_b16_16_2.pth?download=true -O ckpts/inat_glsim.pth
+wget https://huggingface.co/NYCU-PCSxNTHU-MIS/GLSim/resolve/main/nabirds_vit_b16_16_2.pth?download=true -O ckpts/nabirds_glsim.pth
