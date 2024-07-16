@@ -1,0 +1,6 @@
+custom_mean_std: True
+
+defaults:
+    dataset: 'datasets/moe.yaml'
+    settings: 'settings/ft_is224.yaml'
+    augs: 'augs/weakaugs.yaml'

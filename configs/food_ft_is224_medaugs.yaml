@@ -1,0 +1,6 @@
+save_images: 100000
+
+defaults:
+    dataset: 'datasets/food.yaml'
+    settings: 'settings/ft_is224.yaml'
+    augs: 'augs/medaugs.yaml'

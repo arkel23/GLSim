@@ -1,0 +1,4 @@
+defaults:
+    dataset: 'datasets/nabirds.yaml'
+    settings: 'settings/ft_is224.yaml'
+    augs: 'augs/weakaugs.yaml'

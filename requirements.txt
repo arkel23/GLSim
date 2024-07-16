@@ -1,0 +1,6 @@
+wandb
+timm==0.9.12
+einops
+gradio
+scipy==1.8.0
+# opencv

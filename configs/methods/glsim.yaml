@@ -1,0 +1,13 @@
+# backbone
+classifier: 'cls'
+
+# cropping:
+dynamic_anchor: True
+anchor_class_token: True
+
+# reducer related
+reducer: 'cls'
+
+# aggregator related
+aggregator: True
+aggregator_norm: True
