@@ -164,10 +164,10 @@ python tools/inference.py --ckpt_path ckpts/dafb_glsim.pth --images_path samples
 ```
 
 To visualize the global-local similarity (and other fine-grained discriminative
-feature selection mechanisms such as attention rollout as shown in the
-first figure and the following figure):
+feature selection mechanisms such as attention rollout) as shown in the
+first figure and the following figure:
 
-![](./assets/dfsm_pt_settings_nabirds_dinov2.png)
+![](./assets/dfsm_pt_settings_dinov2_nabirds.png)
 
 For batched inference on random train or test splits:
 
