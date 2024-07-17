@@ -128,7 +128,7 @@ python tools/train.py --cfg configs/cub_ft_is224_medaugs.yaml --lr 0.01 --model_
 
 Similarly, for image size 448:
 ```
-python tools/train.py --cfg configs/cub_ft_is224_medaugs.yaml --lr 0.01 --model_name vit_b16 --cfg_method configs/methods/glsim.yaml --cfg_is configs/settings/ft_is448.yaml
+python tools/train.py --cfg configs/cub_ft_is224_medaugs.yaml --lr 0.01 --model_name vit_b16 --cfg_method configs/methods/glsim.yaml --image_size 448
 ```
 
 ## Evaluation
