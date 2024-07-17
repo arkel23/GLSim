@@ -13,7 +13,7 @@ from setuptools import find_packages, setup, Command
 
 # Package meta-data.
 NAME = 'glsim'
-DESCRIPTION = 'Global-Local Similarity-Based Anchor Cropping'
+DESCRIPTION = 'Global-Local Similarity for Efficient Fine-Grained Image Recognition with Vision Transformers'
 URL = 'blank'
 EMAIL = 'blank'
 AUTHOR = 'blank'
