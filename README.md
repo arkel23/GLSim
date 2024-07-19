@@ -1,5 +1,7 @@
 # Global-Local Similarity for Efficient Fine-Grained Image Recognition with Vision Transformers
 
+Official Pytorch code for the paper: [Global-Local Similarity for Efficient Fine-Grained Image Recognition with Vision Transformers](https://arxiv.org/abs/2407.12891).
+
 We propose a novel metric, GLS, to identify discriminative regions in an image
 by comparing the similarity between its global and local representations.
 
@@ -201,3 +203,25 @@ model = ViTGLSim(cfg)
 x = torch.rand(2, cfg.num_channels, cfg.image_size, cfg.image_size)
 out = model(x)
 ```
+
+# Citation
+If you find our work helpful in your research, please cite it as:
+```
+@misc{rios_global-local_2024,
+	title = {Global-{Local} {Similarity} for {Efficient} {Fine}-{Grained} {Image} {Recognition} with {Vision} {Transformers}},
+	url = {http://arxiv.org/abs/2407.12891},
+	publisher = {arXiv},
+	author = {Rios, Edwin Arkel and Hu, Min-Chun and Lai, Bo-Cheng},
+	month = jul,
+	year = {2024},
+	note = {arXiv:2407.12891 [cs]},
+}
+```
+
+# Acknowledgements
+We thank NYCU's HPC Center and National Center for High-performance Computing (NCHC) for providing computational and storage resources. 
+
+We thank the authors of [TransFG](https://github.com/TACJu/TransFG), [FFVT](https://github.com/Markin-Wang/FFVT), [CAL](https://github.com/raoyongming/CAL), and [timm](https://github.com/huggingface/pytorch-image-models/) for providing implementations for comparison.
+
+Also, [Weight and Biases](https://wandb.ai/) for their platform for experiment management.
+ 
