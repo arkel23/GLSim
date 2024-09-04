@@ -108,8 +108,11 @@ class Trainer():
 
             if self.args.classifier_aux:
                 output, output_aux = output
-            elif self.args.anchor_size:
+            elif self.args.anchor_size and isinstance(output, tuple):
+                crops = True
                 output, images_crops = output
+            else:
+                crops = False
 
             if self.args.num_anchors:
                 r = self.args.seq_len_post_reducer
@@ -129,7 +132,7 @@ class Trainer():
                         loss_aux = multi_cont_loss(output_aux, norm_ind=self.args.norm_ind)
                 loss = loss + (self.args.loss_aux_weight * loss_aux)
 
-        if self.args.anchor_size:
+        if self.args.anchor_size and crops:
             resize_size = self.args.anchor_resize_size if self.args.anchor_resize_size else self.args.image_size
             if (self.args.save_images and train and (self.curr_iter % self.args.save_images == 0)):
                 self.save_images(

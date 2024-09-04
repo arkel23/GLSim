@@ -209,11 +209,20 @@ class TIMMViT(nn.Module):
         self.model = timm.create_model(args.model_name, num_classes=1000,
                                        img_size=args.image_size, drop_path_rate=args.sd,
                                        pretrained=args.pretrained, args=args)
-        self.model.reset_classifier(args.num_classes)
+
+        if args.classifier == 'cls_pool':
+            global_pool = 'cls_pool'
+        elif args.classifier == 'pool':
+            global_pool = 'pool'
+        else:
+            global_pool = 'token'
+        self.model.reset_classifier(args.num_classes, global_pool)
+
+        patch_size = int([s for s in args.model_name.split('_') if 'patch' in s][0].replace('patch', ''))
         if args.dynamic_anchor:
-            args.anchor_size = 16
+            args.anchor_size = patch_size
             self.model.add_crop_cls()
-        cfg = dict(seq_len_post_reducer=((args.image_size // 16) ** 2))
+        cfg = dict(seq_len_post_reducer=((args.image_size // patch_size) ** 2))
         self.cfg = SimpleNamespace(**cfg)
 
     def forward(self, images, labels=None, train=False):

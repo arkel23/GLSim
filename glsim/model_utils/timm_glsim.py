@@ -61,7 +61,7 @@ _logger = logging.getLogger(__name__)
 
 class GLSimCrop(nn.Module):
     def __init__(self, dynamic_top=8, patch_equivalent=16, sim_metric='cos',
-                 cls_token=True, debugging=False,):
+                 cls_token=True, select_top_k=False, debugging=False,):
         super().__init__()
         self.dynamic_top = dynamic_top
         self.patch_equivalent = patch_equivalent
@@ -69,6 +69,9 @@ class GLSimCrop(nn.Module):
 
         if cls_token:
             self.class_token = True
+
+        if select_top_k:
+            self.select_top_k = True
 
         self.debugging = debugging
 
@@ -101,6 +104,11 @@ class GLSimCrop(nn.Module):
         self.maybe_print('Distances and 1-d indexes: ', distances.shape, top.shape,
                          ind.shape, top[0], ind[0])
 
+        if hasattr(self, 'select_top_k'):
+            ind = repeat(ind, 'b i -> b i d', d=l.shape[-1])
+            selected = torch.gather(l, dim=1, index=ind)
+            return selected, distances, top, ind
+
         avg = reduce(distances, 'b s -> b', 'mean')
         stds = torch.std(distances, dim=-1)
 
@@ -120,7 +128,11 @@ class GLSimCrop(nn.Module):
         else:
             img_size = images.shape[-1]
 
-        distances, top, ind, avgs, stds = self.get_glsim_indices(x)
+        if hasattr(self, 'select_top_k'):
+            selected, distances, top, ind = self.get_glsim_indices(x)
+            return selected
+        else:
+            distances, top, ind, avgs, stds = self.get_glsim_indices(x)
 
         fh = int(math.sqrt(x.shape[1]))
 
@@ -170,6 +182,7 @@ class Attention(nn.Module):
             attn_drop: float = 0.,
             proj_drop: float = 0.,
             norm_layer: nn.Module = nn.LayerNorm,
+            token_drop: float = 0.,
     ) -> None:
         super().__init__()
         assert dim % num_heads == 0, 'dim should be divisible by num_heads'
@@ -186,8 +199,17 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
+        if token_drop:
+            self.token_drop = nn.Dropout1d(token_drop)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, N, C = x.shape
+
+        if hasattr(self, 'token_drop'):
+            x_cls, x_others = torch.split(x, [1, N-1], dim=1)
+            x_others = self.token_drop(x_others)
+            x = torch.cat([x_cls, x_others], dim=1)
+
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
         q, k, v = qkv.unbind(0)
         q, k = self.q_norm(q), self.k_norm(k)
@@ -242,6 +264,7 @@ class Block(nn.Module):
             norm_layer: nn.Module = nn.LayerNorm,
             mlp_layer: nn.Module = Mlp,
             adapter: str = None,
+            token_drop: float = 0.,
     ) -> None:
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -253,6 +276,7 @@ class Block(nn.Module):
             attn_drop=attn_drop,
             proj_drop=proj_drop,
             norm_layer=norm_layer,
+            token_drop=token_drop,
         )
         self.ls1 = LayerScale(dim, init_values=init_values) if init_values else nn.Identity()
         self.drop_path1 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
@@ -444,9 +468,14 @@ class TIMMGLSViT(nn.Module):
             # cropping module
             dynamic_top = getattr(args, 'dynamic_top', 8)
             sim_metric = getattr(args, 'sim_metric', 'cos')
-
-            self.get_crops = GLSimCrop(dynamic_top, patch_size, sim_metric,
-                                           class_token, self.debugging)
+            select_top_k = getattr(args, 'select_top_k', False)
+            if select_top_k:
+                self.select_top_k = GLSimCrop(dynamic_top, patch_size, sim_metric,
+                                            class_token, select_top_k, self.debugging)
+            else:
+                self.inference_crops = getattr(args, 'inference_crops', True)
+                self.get_crops = GLSimCrop(dynamic_top, patch_size, sim_metric,
+                                            class_token, debugging=self.debugging)
 
             self.aggregator = nn.Sequential(
                 block_fn(
@@ -462,6 +491,7 @@ class TIMMGLSViT(nn.Module):
                     norm_layer=norm_layer,
                     act_layer=act_layer,
                     mlp_layer=mlp_layer,
+                    token_drop=getattr(args, 'token_drop', 0.2),
                 ),
                 nn.LayerNorm(embed_dim)
             )
@@ -522,13 +552,17 @@ class TIMMGLSViT(nn.Module):
     def reset_classifier(self, num_classes: int, global_pool = None) -> None:
         self.num_classes = num_classes
         if global_pool is not None:
-            assert global_pool in ('', 'avg', 'token', 'map')
+            assert global_pool in ('', 'avg', 'token', 'map', 'pool', 'cls_pool')
             if global_pool == 'map' and self.attn_pool is None:
                 assert False, "Cannot currently add attention pooling in reset_classifier()."
             elif global_pool != 'map ' and self.attn_pool is not None:
                 self.attn_pool = None  # remove attention pooling
             self.global_pool = global_pool
-        self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
+
+        if global_pool == 'cls_pool':
+            self.head = nn.Linear(self.embed_dim * 2, num_classes) if num_classes > 0 else nn.Identity()
+        else:
+            self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
         return 0
 
     def add_crop_cls(self) -> None:
@@ -649,7 +683,17 @@ class TIMMGLSViT(nn.Module):
             x = torch.cat([x[:, :1], x[:, -s:]], dim=1)
         x = self.norm(x)
 
-        if hasattr(self, 'get_crops'): #  and self.training:
+        if hasattr(self, 'select_top_k'):
+            # get top k tokens
+            top_k = self.select_top_k(x, images)
+            x = torch.cat([x[:, :1], top_k], dim=1)
+            self.maybe_print('After selection: ', x.shape)
+
+            # aggregator
+            x = self.aggregator(x)
+            self.maybe_print('After aggregator: ', x.shape)
+
+        elif hasattr(self, 'get_crops') and (self.inference_crops or self.training):
             # get crops
             crops = self.get_crops(x, images)
 
@@ -677,10 +721,16 @@ class TIMMGLSViT(nn.Module):
 
         if hasattr(self, 'get_crops'):
             x = x[:, 0]
+        elif self.global_pool == 'cls_pool':
+            x_cls, x_others = x[:, 0], x[:, 1:]
+            x_others = x_others.mean(dim=1)
+            x = torch.cat([x_cls, x_others], dim=-1)
         elif self.attn_pool is not None:
             x = self.attn_pool(x)
         elif self.global_pool == 'avg':
             x = x[:, self.num_prefix_tokens:].mean(dim=1)
+        elif self.global_pool == 'pool':
+            x = x.mean(dim=1)
         elif self.global_pool:
             x = x[:, 0]  # class token
         x = self.fc_norm(x)

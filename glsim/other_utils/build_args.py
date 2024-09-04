@@ -11,7 +11,7 @@ BACKBONES = ['swin_b', 'swin_l', 'resnet50', 'resnet50_in21k', 'resnet101']
 FG = ['ffvt', 'transfg', 'cal']
 MODELS = VITS + FG + BACKBONES
 REDUCERS = (None, False, True, 'cls')
-HEADS = (None, 'cls', 'pool', 'avg_cls', 'max_cls',)
+HEADS = (None, 'cls', 'pool', 'avg_cls', 'max_cls', 'cls_pool')
 AUX = (None, 'cls', 'pool', 'cont', 'multi_cont', 'shared', 'consistency')
 SIM_METRICS = ('cos', 'l1', 'l2')
 VIS_LIST = ('glsim_norm', 'rollout', 'psm', 'maws_11', 'attention_11')
@@ -287,6 +287,10 @@ def add_vit_args(parser):
     parser.add_argument('--aggregator_num_hidden_layers', type=int, default=None)
     parser.add_argument('--aggregator_norm', action='store_true',
                         help='norm after aggregator')
+    # ablations on design
+    parser.add_argument('--select_top_k', action='store_true')
+    parser.add_argument('--token_drop', type=float, default=0.0)
+    parser.add_argument('--inference_crops', action='store_false')
     return parser
 
 
