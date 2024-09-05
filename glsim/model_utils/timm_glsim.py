@@ -1123,6 +1123,10 @@ def _cfg(url: str = '', **kwargs) -> Dict[str, Any]:
 
 default_cfgs = {
     # patch models, imagenet21k (weights from official Google JAX impl), classifier not valid
+    'glsvit_base_patch32_224.orig_in21k': _cfg(
+        #url='https://github.com/huggingface/pytorch-image-models/releases/download/v0.1-vitjx/jx_vit_base_patch32_224_in21k-8db57226.pth',
+        hf_hub_id='timm/vit_base_patch32_224.orig_in21k',
+        num_classes=0),
     'glsvit_base_patch16_224.orig_in21k': _cfg(
         # url='https://github.com/huggingface/pytorch-image-models/releases/download/v0.1-vitjx/jx_vit_base_patch16_224_in21k-e5005f0a.pth',
         hf_hub_id='timm/vit_base_patch16_224.orig_in21k',
@@ -1315,6 +1319,14 @@ def glsvit_small_patch8_224(pretrained: bool = False, **kwargs):
     model = _create_vision_transformer('glsvit_small_patch8_224', pretrained=pretrained, **dict(model_args, **kwargs))
     return model
 
+@register_model
+def glsvit_base_patch32_224(pretrained: bool = False, **kwargs):
+    """ ViT-Base (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 224x224, source https://github.com/google-research/vision_transformer.
+    """
+    model_args = dict(patch_size=32, embed_dim=768, depth=12, num_heads=12)
+    model = _create_vision_transformer('glsvit_base_patch32_224', pretrained=pretrained, **dict(model_args, **kwargs))
+    return model
 
 @register_model
 def glsvit_base_patch16_224(pretrained: bool = False, **kwargs):
