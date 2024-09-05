@@ -477,24 +477,49 @@ class TIMMGLSViT(nn.Module):
                 self.get_crops = GLSimCrop(dynamic_top, patch_size, sim_metric,
                                             class_token, debugging=self.debugging)
 
-            self.aggregator = nn.Sequential(
-                block_fn(
-                    dim=embed_dim,
-                    num_heads=num_heads,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    qk_norm=qk_norm,
-                    init_values=init_values,
-                    proj_drop=proj_drop_rate,
-                    attn_drop=attn_drop_rate,
-                    drop_path=drop_path_rate,
-                    norm_layer=norm_layer,
-                    act_layer=act_layer,
-                    mlp_layer=mlp_layer,
-                    token_drop=getattr(args, 'token_drop', 0.2),
-                ),
-                nn.LayerNorm(embed_dim)
-            )
+            aggregator_type = getattr(args, 'aggregator_type', 'transformer')
+
+            if aggregator_type == 'transformer':
+                self.aggregator = nn.Sequential(
+                    block_fn(
+                        dim=embed_dim,
+                        num_heads=num_heads,
+                        mlp_ratio=mlp_ratio,
+                        qkv_bias=qkv_bias,
+                        qk_norm=qk_norm,
+                        init_values=init_values,
+                        proj_drop=proj_drop_rate,
+                        attn_drop=attn_drop_rate,
+                        drop_path=drop_path_rate,
+                        norm_layer=norm_layer,
+                        act_layer=act_layer,
+                        mlp_layer=mlp_layer,
+                        token_drop=getattr(args, 'token_drop', 0.2),
+                    ),
+                    nn.LayerNorm(embed_dim)
+                )
+            elif aggregator_type == 'dwsc':
+                self.aggregator = nn.Sequential(
+                    Rearrange('b s d -> b d s'),
+                    nn.Conv1d(embed_dim, embed_dim, 1+dynamic_top, groups=embed_dim),
+                    # nn.BatchNorm1d(embed_dim),
+                    Rearrange('b d s -> b s d'),
+                    nn.LayerNorm(embed_dim),
+                    Rearrange('b s d -> b d s'),
+                    nn.GELU(),
+                    nn.Conv1d(embed_dim, embed_dim, 1),
+                    Rearrange('b d s -> b s d'),
+                    nn.LayerNorm(embed_dim),
+                )
+            elif aggregator_type == 'conv':
+                self.aggregator = nn.Sequential(
+                    Rearrange('b s d -> b d s'),
+                    nn.Conv1d(embed_dim, embed_dim, 1+dynamic_top),
+                    Rearrange('b d s -> b s d'),
+                    nn.LayerNorm(embed_dim),
+                )
+            else:
+                raise NotImplementedError
 
         # Classifier Head
         if global_pool == 'map':
@@ -572,6 +597,10 @@ class TIMMGLSViT(nn.Module):
             cls_token_weights = self.cls_token
             self.cls_token_crops.copy_(cls_token_weights)
             print(f'Loaded crops CLS token from CLS token')
+
+        if hasattr(self, 'aggregator'):
+            self.norm = nn.Identity()
+
         return 0
 
     def _pos_embed(self, x: torch.Tensor, crops=False) -> torch.Tensor:

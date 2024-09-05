@@ -288,6 +288,8 @@ def add_vit_args(parser):
     parser.add_argument('--aggregator_norm', action='store_true',
                         help='norm after aggregator')
     # ablations on design
+    parser.add_argument('--aggregator_type', type=str, default='transformer',
+                        choices=['transformer', 'dwsc', 'conv'])
     parser.add_argument('--select_top_k', action='store_true')
     parser.add_argument('--token_drop', type=float, default=0.0)
     parser.add_argument('--inference_crops', action='store_false')
