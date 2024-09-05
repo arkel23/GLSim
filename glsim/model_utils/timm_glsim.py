@@ -59,6 +59,62 @@ __all__ = ['TIMMGLSViT']  # model_registry will add each entrypoint fn to this
 _logger = logging.getLogger(__name__)
 
 
+class Adapter(nn.Module):
+    """Multi-Headed Dot Product Attention"""
+    def __init__(self, adapter, dim, adapter_dim, kernel_size):
+        super().__init__()
+
+        self.adapter_down = nn.Linear(dim, adapter_dim)
+        self.adapter_up = nn.Linear(adapter_dim, dim)
+        self.act = nn.GELU()
+
+        if adapter == 'convpass':
+            padding = kernel_size // 2
+            # conv with kernel size 3, stride 1, padding=1
+            self.adapter_conv = nn.Conv2d(adapter_dim, adapter_dim, kernel_size, 1, padding)
+
+        self.init_weights()
+
+    @torch.no_grad()
+    def init_weights(self):
+        if hasattr(self, 'adapter_down'):
+            nn.init.xavier_uniform_(self.adapter_down.weight)
+            nn.init.zeros_(self.adapter_down.bias)
+            nn.init.xavier_uniform_(self.adapter_up.weight)
+            nn.init.zeros_(self.adapter_up.bias)
+        if hasattr(self, 'adapter_conv'):
+            nn.init.xavier_uniform_(self.adapter_conv.weight)
+
+    def forward(self, x):
+        x = self.act(self.adapter_down(x))
+
+        if hasattr(self, 'adapter_conv'):
+            _, s, _ = x.shape
+            h = int(s ** 0.5)
+            cls = False if (h ** 2) == s else True
+
+            if cls:
+                x_cls, x_patches = torch.split(x, [1, s - 1], dim=1)
+                x_cls = rearrange(x_cls, 'b 1 d -> b d 1 1')
+                x_cls = self.adapter_conv(x_cls)
+                x_cls = rearrange(x_cls, 'b d 1 1 -> b 1 d')
+
+                x_patches = rearrange(x_patches, 'b (h w) d -> b d h w', h=h)
+                x_patches = self.adapter_conv(x_patches)
+                x_patches = rearrange(x_patches, 'b d h w -> b (h w) d')
+
+                x = torch.cat([x_cls, x_patches], dim=1)
+                x = self.act(x)
+            else:
+                x = rearrange(x, 'b (h w) d -> b d h w', h=h)
+                x = self.adapter_conv(x)
+                x = rearrange(x, 'b d h w -> b (h w) d')                
+                x = self.act(x)
+
+        x = self.adapter_up(x)
+        return x
+
+
 class GLSimCrop(nn.Module):
     def __init__(self, dynamic_top=8, patch_equivalent=16, sim_metric='cos',
                  cls_token=True, select_top_k=False, debugging=False,):
@@ -500,6 +556,7 @@ class TIMMGLSViT(nn.Module):
                 )
             elif aggregator_type == 'dwsc':
                 self.aggregator = nn.Sequential(
+                    nn.LayerNorm(embed_dim),
                     Rearrange('b s d -> b d s'),
                     nn.Conv1d(embed_dim, embed_dim, 1+dynamic_top, groups=embed_dim),
                     # nn.BatchNorm1d(embed_dim),
@@ -513,6 +570,7 @@ class TIMMGLSViT(nn.Module):
                 )
             elif aggregator_type == 'conv':
                 self.aggregator = nn.Sequential(
+                    nn.LayerNorm(embed_dim),
                     Rearrange('b s d -> b d s'),
                     nn.Conv1d(embed_dim, embed_dim, 1+dynamic_top),
                     Rearrange('b d s -> b s d'),

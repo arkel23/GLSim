@@ -293,6 +293,9 @@ def add_vit_args(parser):
     parser.add_argument('--select_top_k', action='store_true')
     parser.add_argument('--token_drop', type=float, default=0.0)
     parser.add_argument('--inference_crops', action='store_false')
+
+    parser.add_argument('--freeze_backbone', action='store_true')
+    parser.add_argument('--adapter', type=str, default=None)
     return parser
 
 

@@ -56,6 +56,9 @@ def build_model(args):
             ret.unexpected_keys))
         print('Loaded from custom checkpoint.')
 
+    if args.freeze_backbone:
+        freeze_backbone(args, model)
+
     if args.distributed:
         model.cuda()
     else:
@@ -63,6 +66,21 @@ def build_model(args):
 
     print(f'Initialized classifier: {args.model_name}')
     return model
+
+
+def freeze_backbone(args, model):
+    keywords = ['head', 'aggregator', 'adapter', 'dfsm', 'feature_center', 'prompt']
+
+    for name, param in model.named_parameters():
+        if any(kw in name for kw in keywords):
+            param.requires_grad = True
+            # print(name)
+        else:
+            param.requires_grad = False
+
+    print('Total parameters (M): ', sum([p.numel() for p in model.parameters()]) / (1e6))
+    print('Trainable parameters (M): ', sum([p.numel() for p in model.parameters() if p.requires_grad]) / (1e6))
+    return 0
 
 
 class VisionTransformer(nn.Module):
