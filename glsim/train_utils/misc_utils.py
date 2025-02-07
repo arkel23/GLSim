@@ -16,7 +16,6 @@ def count_params_single(model):
 def count_params_trainable(model):
     return sum([p.numel() for p in model.parameters() if p.requires_grad])
 
-
 def set_random_seed(seed=0, numpy=True):
     random.seed(seed)
     torch.manual_seed(seed)
@@ -28,11 +27,12 @@ def set_random_seed(seed=0, numpy=True):
 
 
 def summary_stats(epochs, time_total, best_acc, best_epoch, max_memory,
-                  no_params, class_deviation, debugging=False):
+                  no_params, no_params_trainable, class_deviation, debugging=False):
     time_avg = round((time_total / epochs) / 60, 2)
     best_time = round((time_avg * best_epoch) / 60, 2)
     time_total = round(time_total / 60, 2)  # mins
     no_params = round(no_params / (1e6), 2)  # millions of parameters
+    no_params_trainable = round(no_params_trainable / (1e6), 2)  # millions
     max_memory = round(max_memory, 2)
 
     print('''Total run time (minutes): {}
@@ -52,15 +52,17 @@ def summary_stats(epochs, time_total, best_acc, best_epoch, max_memory,
         wandb.run.summary['best_time'] = best_time
         wandb.run.summary['max_memory'] = max_memory
         wandb.run.summary['no_params'] = no_params
+        wandb.run.summary['no_params_trainable'] = no_params_trainable
         wandb.run.summary['class_deviation'] = class_deviation
     return 0
 
 
-def stats_test(test_acc, class_deviation, max_memory, no_params,
+def stats_test(test_acc, class_deviation, max_memory, no_params, no_params_trainable,
                time_total, num_images, debugging=False):
 
     throughput = round(num_images / time_total, 2)
     no_params = round(no_params / (1e6), 2)  # millions of parameters
+    no_params_trainable = round(no_params_trainable / (1e6), 2)  # millions
     max_memory = round(max_memory, 2)
 
     print('''Throughput (images / s): {}
@@ -76,6 +78,7 @@ def stats_test(test_acc, class_deviation, max_memory, no_params,
         wandb.run.summary['throughput'] = throughput
         wandb.run.summary['max_memory'] = max_memory
         wandb.run.summary['no_params'] = no_params
+        wandb.run.summary['no_params_trainable'] = no_params_trainable
     return 0
 
 

@@ -141,7 +141,7 @@ def save_images(fig, vis_mask, power, split, output_dir, debugging=True):
     pow = '_power' if power else ''
     fn = f'{vis_mask}{pow}_{split}.png'
     fp = os.path.join(output_dir, fn)
-    fig.savefig(fp, dpi=300, bbox_inches='tight')
+    fig.savefig(fp, dpi=300, bbox_inches='tight', pad_inches=0.01)
     print('Saved ', fp)
 
     if not debugging:

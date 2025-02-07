@@ -1,6 +1,8 @@
 # Global-Local Similarity for Efficient Fine-Grained Image Recognition with Vision Transformers
 
-Official Pytorch code for the paper: [Global-Local Similarity for Efficient Fine-Grained Image Recognition with Vision Transformers](https://arxiv.org/abs/2407.12891).
+Official Pytorch code for the paper:
+[Global-Local Similarity for Efficient Fine-Grained Image Recognition with Vision Transformers](https://arxiv.org/abs/2407.12891)
+published in ISCAS 25.
 
 We propose a novel metric, GLS, to identify discriminative regions in an image
 by comparing the similarity between its global and local representations.
@@ -28,7 +30,11 @@ compared to aggregated attention mechanisms such as attention rollout.
 
 ![](./assets/flops_dfsm_b16.png)
 
-Also, our method achieves a superior accuracy vs cost trade-off compared to alternatives.
+Also, our method achieves a competitive accuracy vs cost trade-off compared to alternatives.
+
+![](./assets/table_nabirds.png)
+
+![](./assets/table_inat17.png)
 
 ![](./assets/acc_tp_cub.png)
 

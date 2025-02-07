@@ -11,7 +11,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from glsim.data_utils.build_dataloaders import build_dataloaders
 from glsim.model_utils.build_model import build_model
 from glsim.other_utils.build_args import parse_train_args
-from glsim.train_utils.misc_utils import summary_stats, stats_test, set_random_seed
+from glsim.train_utils.misc_utils import summary_stats, stats_test, set_random_seed, count_params_trainable
 from glsim.train_utils.scheduler import build_scheduler
 from glsim.train_utils.trainer import Trainer
 from glsim.train_utils.focal_loss import FocalLoss
@@ -22,13 +22,15 @@ IGNORE = ('project_name', 'ckpt_path', 'transfer_learning', 'test_only', 'batch_
 
 
 def adjust_args_general(args):
+    freeze = '_fz' if args.freeze_backbone else ''
+
     if args.anchor_size:
-        args.run_name = '{}_{}_{}_{}'.format(
-            args.dataset_name, args.model_name, args.anchor_size, args.serial
+        args.run_name = '{}_{}_{}{}_{}'.format(
+            args.dataset_name, args.model_name, args.anchor_size, freeze, args.serial
         )
     else:
-        args.run_name = '{}_{}_{}'.format(
-            args.dataset_name, args.model_name, args.serial
+        args.run_name = '{}_{}{}_{}'.format(
+            args.dataset_name, args.model_name, freeze, args.serial
         )
 
     args.results_dir = os.path.join(args.results_dir, args.run_name)
@@ -97,6 +99,7 @@ def main():
 
     model, criterion, optimizer, lr_scheduler, train_loader, val_loader, test_loader = build_environment(args)
 
+    no_params_trainable = count_params_trainable(model)
     trainer = Trainer(args, model, criterion, optimizer, lr_scheduler,
                       train_loader, val_loader, test_loader)
 
@@ -117,7 +120,7 @@ def main():
             else:
                 num_images = args.num_images_test
 
-            stats_test(test_acc, class_deviation, max_memory, no_params,
+            stats_test(test_acc, class_deviation, max_memory, no_params, no_params_trainable,
                        time_total, num_images, (args.vis_errors or args.test_offline))
             if not args.vis_errors and not args.test_offline:
                 wandb.finish()
@@ -136,7 +139,7 @@ def main():
         if args.local_rank == 0 and not args.debugging:
             time_total = time.time() - time_start
             summary_stats(args.epochs, time_total, best_acc, best_epoch, max_memory,
-                          no_params, class_deviation, args.debugging)
+                          no_params, no_params_trainable, class_deviation, args.debugging)
             wandb.finish()
 
 

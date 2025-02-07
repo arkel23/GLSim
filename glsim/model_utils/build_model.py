@@ -232,6 +232,8 @@ class TIMMViT(nn.Module):
             global_pool = 'cls_pool'
         elif args.classifier == 'pool':
             global_pool = 'pool'
+        elif args.classifier == 'attn_pool':
+            global_pool = 'map'
         else:
             global_pool = 'token'
         self.model.reset_classifier(args.num_classes, global_pool)

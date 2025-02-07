@@ -498,6 +498,7 @@ class TIMMGLSViT(nn.Module):
 
         adapter = getattr(args, 'adapter', None)
 
+        self.num_heads = num_heads
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
         self.blocks = nn.Sequential(*[
             block_fn(
@@ -533,8 +534,10 @@ class TIMMGLSViT(nn.Module):
                 self.get_crops = GLSimCrop(dynamic_top, patch_size, sim_metric,
                                             class_token, debugging=self.debugging)
 
-            aggregator_type = getattr(args, 'aggregator_type', 'transformer')
+        aggregator = getattr(args, 'aggregator', False)
+        aggregator_type = getattr(args, 'aggregator_type', 'transformer')
 
+        if aggregator:
             if aggregator_type == 'transformer':
                 self.aggregator = nn.Sequential(
                     block_fn(
@@ -636,8 +639,13 @@ class TIMMGLSViT(nn.Module):
         self.num_classes = num_classes
         if global_pool is not None:
             assert global_pool in ('', 'avg', 'token', 'map', 'pool', 'cls_pool')
-            if global_pool == 'map' and self.attn_pool is None:
-                assert False, "Cannot currently add attention pooling in reset_classifier()."
+            if global_pool == 'map':
+                self.attn_pool = AttentionPoolLatent(
+                    self.embed_dim,
+                    num_heads=self.num_heads,
+                    mlp_ratio=4,
+                    norm_layer=partial(nn.LayerNorm, eps=1e-6),
+                )
             elif global_pool != 'map ' and self.attn_pool is not None:
                 self.attn_pool = None  # remove attention pooling
             self.global_pool = global_pool
@@ -776,10 +784,6 @@ class TIMMGLSViT(nn.Module):
             x = torch.cat([x[:, :1], top_k], dim=1)
             self.maybe_print('After selection: ', x.shape)
 
-            # aggregator
-            x = self.aggregator(x)
-            self.maybe_print('After aggregator: ', x.shape)
-
         elif hasattr(self, 'get_crops') and (self.inference_crops or self.training):
             # get crops
             crops = self.get_crops(x, images)
@@ -802,9 +806,12 @@ class TIMMGLSViT(nn.Module):
             x_crops = x_crops[:, :1, :]
             x = torch.cat([x, x_crops], dim=1)
 
+
+        if hasattr(self, 'aggregator'):
             # aggregator
             x = self.aggregator(x)
             self.maybe_print('After aggregator: ', x.shape)
+
 
         if hasattr(self, 'get_crops'):
             x = x[:, 0]
